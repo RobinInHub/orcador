@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Gerador de Recibo</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --azul: #153dcc;
+      --cinza: #555;
+      --vermelho: #b00020;
+      --borda: #222;
+      --fundo: #eee;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--fundo);
+      color: #111;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    h1, h2, h3 { margin-top: 0; }
+    .painel {
+      width: 100%;
+      max-width: 1050px;
+      margin: 0 auto 24px;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 8px #999;
+    }
+    .navegacao {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .navegacao a {
+      display: inline-block;
+      padding: 10px 15px;
+      border-radius: 5px;
+      background: var(--cinza);
+      color: #fff;
+      font-weight: bold;
+      text-decoration: none;
+    }
+    .formulario {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .campo { display: flex; flex-direction: column; }
+    .campo-largo { grid-column: 1 / -1; }
+    label { margin-bottom: 5px; font-weight: bold; }
+    input, textarea, select {
+      width: 100%;
+      padding: 9px;
+      border: 1px solid #999;
+      border-radius: 4px;
+      color: #111;
+      background: #fff;
+      font: 14px Arial, Helvetica, sans-serif;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    small { margin-top: 5px; color: #555; }
+    .botoes { margin-top: 20px; text-align: center; }
+    button {
+      margin: 4px;
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 5px;
+      color: #fff;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover, .navegacao a:hover { opacity: .86; }
+    .btn-azul { background: var(--azul); }
+    .btn-cinza { background: var(--cinza); }
+    .btn-vermelho { background: var(--vermelho); }
+    .mensagem {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 4px;
+      background: #e8f5e9;
+      color: #176b2c;
+      text-align: center;
+      font-weight: bold;
+    }
+    #recibo {
+      width: 210mm;
+      min-height: 148mm;
+      margin: 20px auto;
+      padding: 14mm;
+      background: #fff;
+      box-shadow: 0 0 8px #999;
+    }
+    .cabecalho-recibo {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      gap: 24px;
+      align-items: center;
+      padding-bottom: 13px;
+      border-bottom: 1px solid var(--borda);
+    }
+    .area-logo {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      min-height: 90px;
+    }
+    .area-logo img {
+      display: block;
+      width: auto;
+      max-width: 220px;
+      max-height: 90px;
+      object-fit: contain;
+    }
+    .dados-documento { text-align: right; }
+    .dados-documento h2 { margin: 0 0 8px; font-size: 24px; }
+    .dados-documento p { margin: 4px 0; font-size: 12px; }
+    .valor-destaque {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 8px 13px;
+      border: 1px solid var(--borda);
+      border-radius: 4px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .texto-recibo {
+      margin: 25px 0 18px;
+      font-size: 14px;
+      line-height: 1.8;
+      text-align: justify;
+    }
+    .texto-recibo strong { font-weight: 700; }
+    .observacoes-recibo {
+      display: none;
+      margin-top: 16px;
+      padding-top: 10px;
+      border-top: 1px solid #bbb;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+    .local-data {
+      margin-top: 26px;
+      text-align: right;
+      font-size: 13px;
+    }
+    .assinaturas {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 55px;
+      margin-top: 60px;
+    }
+    .assinatura {
+      min-height: 62px;
+      border-top: 1px solid #111;
+      padding-top: 7px;
+      text-align: center;
+      font-size: 11px;
+    }
+    .assinatura strong { display: block; font-size: 12px; }
+    .assinatura-cliente { display: none; }
+    .rodape {
+      margin-top: 28px;
+      color: #666;
+      text-align: center;
+      font-size: 9px;
+    }
+    @page { size: A4 portrait; margin: 12mm; }
+    @media print {
+      html, body {
+        width: auto;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      .painel { display: none !important; }
+      #recibo {
+        width: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+      }
+      .cabecalho-recibo {
+        grid-template-columns: 230px 1fr !important;
+        align-items: center !important;
+      }
+      .area-logo, .area-logo img {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      .area-logo img {
+        max-width: 220px !important;
+        max-height: 90px !important;
+      }
+      #recibo, #recibo * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+    @media (max-width: 760px) {
+      body { padding: 8px; }
+      .formulario { grid-template-columns: 1fr; }
+      .campo-largo { grid-column: auto; }
+      #recibo {
+        width: 100%;
+        min-height: auto;
+        padding: 20px;
+      }
+      .cabecalho-recibo {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .dados-documento { text-align: left; }
+      .assinaturas { grid-template-columns: 1fr; gap: 50px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="painel">
+      <div class="navegacao">
+        <h1>Gerador de Recibo</h1>
+        <a href="./index.html">Voltar ao Orçamento</a>
+      </div>
+
+      <div class="formulario">
+        <div class="campo">
+          <label for="empresaNome">Nome da empresa</label>
+          <input id="empresaNome" value="BETO PINTURAS CONSTRUÇÕES E REFORMAS LTDA">
+        </div>
+        <div class="campo">
+          <label for="numeroRecibo">Número do recibo</label>
+          <input id="numeroRecibo" value="01">
+        </div>
+        <div class="campo">
+          <label for="empresaDocumento">CNPJ da empresa</label>
+          <input id="empresaDocumento" placeholder="Digite o CNPJ da empresa">
+        </div>
+        <div class="campo">
+          <label for="empresaTelefone">Telefone da empresa</label>
+          <input id="empresaTelefone" value="(85) 98760-0188">
+        </div>
+        <div class="campo">
+          <label for="pagadorNome">Recebemos de</label>
+          <input id="pagadorNome" placeholder="Nome ou razão social do pagador">
+        </div>
+        <div class="campo">
+          <label for="pagadorDocumento">CPF/CNPJ do pagador</label>
+          <input id="pagadorDocumento" placeholder="CPF ou CNPJ">
+        </div>
+        <div class="campo">
+          <label for="valorRecibo">Valor recebido (R$)</label>
+          <input id="valorRecibo" type="number" min="0" step="0.01" placeholder="0,00">
+        </div>
+        <div class="campo">
+          <label for="dataRecibo">Data do recibo</label>
+          <input id="dataRecibo" type="date">
+        </div>
+        <div class="campo">
+          <label for="formaPagamento">Forma de pagamento</label>
+          <select id="formaPagamento">
+            <option value="PIX">PIX</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Débito">Débito</option>
+            <option value="Crédito">Crédito</option>
+            <option value="Transferência bancária">Transferência bancária</option>
+            <option value="Cheque">Cheque</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="cidadeEstado">Cidade/UF</label>
+          <input id="cidadeEstado" placeholder="Ex.: Fortaleza/CE">
+        </div>
+        <div class="campo campo-largo">
+          <label for="referente">Referente a</label>
+          <textarea id="referente" placeholder="Descreva os serviços, produtos ou parcelas pagos"></textarea>
+        </div>
+        <div class="campo campo-largo">
+          <label for="observacoes">Observações (opcional)</label>
+          <textarea id="observacoes" placeholder="Só aparecerá no recibo quando estiver preenchido"></textarea>
+        </div>
+        <div class="campo">
+          <label for="nomeAssinante">Nome de quem assina</label>
+          <input id="nomeAssinante" value="BETO PINTURAS CONSTRUÇÕES E REFORMAS LTDA">
+        </div>
+        <div class="campo">
+          <label for="documentoAssinante">CPF/CNPJ de quem assina</label>
+          <input id="documentoAssinante" placeholder="CPF ou CNPJ">
+        </div>
+        <div class="campo">
+          <label for="mostrarAssinaturaCliente">Adicionar assinatura do pagador</label>
+          <select id="mostrarAssinaturaCliente">
+            <option value="nao">Não</option>
+            <option value="sim">Sim</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="logoArquivo">Trocar logo temporariamente</label>
+          <input id="logoArquivo" type="file" accept="image/png,image/jpeg,image/webp">
+          <small id="nomeLogo">Logo padrão: logo.png</small>
+        </div>
+      </div>
+
+      <div class="botoes">
+        <button id="btnAtualizar" class="btn-azul" type="button">Atualizar recibo</button>
+        <button id="btnImprimir" class="btn-azul" type="button">Imprimir / Salvar PDF</button>
+        <button id="btnSalvar" class="btn-cinza" type="button">Salvar dados</button>
+        <button id="btnCarregar" class="btn-cinza" type="button">Carregar dados</button>
+        <button id="btnRestaurarLogo" class="btn-vermelho" type="button">Restaurar logo</button>
+        <button id="btnLimpar" class="btn-vermelho" type="button">Limpar recibo</button>
+      </div>
+      <div id="mensagem" class="mensagem" role="status"></div>
+    </section>
+
+    <article id="recibo">
+      <header class="cabecalho-recibo">
+        <div class="area-logo">
+          <img id="logoVisual" src="./logo.png" alt="Logo da empresa">
+        </div>
+        <div class="dados-documento">
+          <h2>RECIBO Nº <span id="outNumero">01</span></h2>
+          <p id="outEmpresa"></p>
+          <p id="outEmpresaDocumento"></p>
+          <p id="outEmpresaTelefone"></p>
+          <div id="outValorDestaque" class="valor-destaque">R$ 0,00</div>
+        </div>
+      </header>
+
+      <section class="texto-recibo">
+        Recebemos de <strong id="outPagador">________________________________</strong>,
+        inscrito(a) no CPF/CNPJ sob o nº <strong id="outPagadorDocumento">________________</strong>,
+        a importância de <strong id="outValorExtenso">zero real</strong>
+        (<strong id="outValorNumerico">R$ 0,00</strong>), referente a
+        <strong id="outReferente">________________________________</strong>.
+        O pagamento foi realizado por <strong id="outFormaPagamento">PIX</strong>,
+        dando plena e irrevogável quitação do valor recebido.
+      </section>
+
+      <section id="blocoObservacoes" class="observacoes-recibo">
+        <strong>Observações:</strong>
+        <span id="outObservacoes"></span>
+      </section>
+
+      <div class="local-data">
+        <span id="outCidade">________________</span>,
+        <span id="outData">___/___/______</span>.
+      </div>
+
+      <section id="assinaturas" class="assinaturas">
+        <div class="assinatura">
+          <strong id="outAssinante"></strong>
+          <span id="outDocumentoAssinante"></span>
+        </div>
+        <div id="assinaturaCliente" class="assinatura assinatura-cliente">
+          <strong id="outAssinaturaCliente"></strong>
+          <span id="outDocumentoCliente"></span>
+        </div>
+      </section>
+
+      <footer class="rodape">Recibo emitido em duas vias de igual teor.</footer>
+    </article>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      "use strict";
+
+      const LOGO_PADRAO = "./logo.png";
+      const CHAVE_DADOS = "reciboBetoPinturas";
+      let logoAtual = LOGO_PADRAO;
+
+      const porId = (id) => document.getElementById(id);
+      const valor = (id) => porId(id).value;
+
+      function hojeISO() {
+        const hoje = new Date();
+        const diferenca = hoje.getTimezoneOffset() * 60000;
+        return new Date(hoje.getTime() - diferenca).toISOString().slice(0, 10);
+      }
+
+      function dataBR(data) {
+        if (!data) return "___/___/______";
+        const partes = data.split("-");
+        return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : data;
+      }
+
+      function moeda(numero) {
+        const valorSeguro = Number(numero) || 0;
+        return valorSeguro.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        });
+      }
+
+      function inteiroPorExtenso(numero) {
+        const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+        const especiais = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+        const dezenas = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+        const centenas = ["", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
+
+        function ate999(n) {
+          if (n === 0) return "";
+          if (n === 100) return "cem";
+          const partes = [];
+          const c = Math.floor(n / 100);
+          const resto = n % 100;
+          if (c) partes.push(centenas[c]);
+          if (resto) {
+            if (resto < 10) partes.push(unidades[resto]);
+            else if (resto < 20) partes.push(especiais[resto - 10]);
+            else {
+              const d = Math.floor(resto / 10);
+              const u = resto % 10;
+              partes.push(dezenas[d] + (u ? " e " + unidades[u] : ""));
+            }
+          }
+          return partes.join(" e ");
+        }
+
+        if (numero === 0) return "zero";
+        if (numero > 999999999) return numero.toLocaleString("pt-BR");
+
+        const grupos = [];
+        const milhoes = Math.floor(numero / 1000000);
+        const milhares = Math.floor((numero % 1000000) / 1000);
+        const unidadesFinais = numero % 1000;
+
+        if (milhoes) grupos.push(`${ate999(milhoes)} ${milhoes === 1 ? "milhão" : "milhões"}`);
+        if (milhares) grupos.push(milhares === 1 ? "mil" : `${ate999(milhares)} mil`);
+        if (unidadesFinais) grupos.push(ate999(unidadesFinais));
+
+        return grupos.join(" e ");
+      }
+
+      function valorPorExtenso(valorNumerico) {
+        const normalizado = Math.max(0, Math.round((Number(valorNumerico) || 0) * 100));
+        const reais = Math.floor(normalizado / 100);
+        const centavos = normalizado % 100;
+        const partes = [];
+        partes.push(`${inteiroPorExtenso(reais)} ${reais === 1 ? "real" : "reais"}`);
+        if (centavos) partes.push(`${inteiroPorExtenso(centavos)} ${centavos === 1 ? "centavo" : "centavos"}`);
+        return partes.join(" e ");
+      }
+
+      function mostrarMensagem(texto) {
+        const area = porId("mensagem");
+        area.textContent = texto;
+        area.style.display = "block";
+        window.setTimeout(() => { area.style.display = "none"; }, 2500);
+      }
+
+      function atualizarRecibo() {
+        const valorRecebido = Number(valor("valorRecibo")) || 0;
+        const observacoes = valor("observacoes").trim();
+        const assinaturaPagador = valor("mostrarAssinaturaCliente") === "sim";
+
+        porId("outNumero").textContent = valor("numeroRecibo") || "—";
+        porId("outEmpresa").textContent = valor("empresaNome");
+        porId("outEmpresaDocumento").textContent = valor("empresaDocumento") ? `CNPJ: ${valor("empresaDocumento")}` : "";
+        porId("outEmpresaTelefone").textContent = valor("empresaTelefone") ? `Telefone: ${valor("empresaTelefone")}` : "";
+        porId("outValorDestaque").textContent = moeda(valorRecebido);
+        porId("outPagador").textContent = valor("pagadorNome") || "________________________________";
+        porId("outPagadorDocumento").textContent = valor("pagadorDocumento") || "________________";
+        porId("outValorExtenso").textContent = valorPorExtenso(valorRecebido);
+        porId("outValorNumerico").textContent = moeda(valorRecebido);
+        porId("outReferente").textContent = valor("referente") || "________________________________";
+        porId("outFormaPagamento").textContent = valor("formaPagamento");
+        porId("outCidade").textContent = valor("cidadeEstado") || "________________";
+        porId("outData").textContent = dataBR(valor("dataRecibo"));
+        porId("outObservacoes").textContent = observacoes;
+        porId("blocoObservacoes").style.display = observacoes ? "block" : "none";
+        porId("outAssinante").textContent = valor("nomeAssinante") || valor("empresaNome");
+        porId("outDocumentoAssinante").textContent = valor("documentoAssinante") ? `CPF/CNPJ: ${valor("documentoAssinante")}` : "";
+        porId("outAssinaturaCliente").textContent = valor("pagadorNome") || "Assinatura do pagador";
+        porId("outDocumentoCliente").textContent = valor("pagadorDocumento") ? `CPF/CNPJ: ${valor("pagadorDocumento")}` : "";
+        porId("assinaturaCliente").style.display = assinaturaPagador ? "block" : "none";
+        porId("assinaturas").style.gridTemplateColumns = assinaturaPagador ? "repeat(2, 1fr)" : "1fr";
+        porId("logoVisual").src = logoAtual;
+      }
+
+      function obterDados() {
+        const ids = [
+          "empresaNome", "numeroRecibo", "empresaDocumento", "empresaTelefone",
+          "pagadorNome", "pagadorDocumento", "valorRecibo", "dataRecibo",
+          "formaPagamento", "cidadeEstado", "referente", "observacoes",
+          "nomeAssinante", "documentoAssinante", "mostrarAssinaturaCliente"
+        ];
+        const dados = {};
+        ids.forEach((nome) => { dados[nome] = valor(nome); });
+        dados.logoPersonalizada = logoAtual === LOGO_PADRAO ? "" : logoAtual;
+        return dados;
+      }
+
+      function salvarDados() {
+        try {
+          localStorage.setItem(CHAVE_DADOS, JSON.stringify(obterDados()));
+          mostrarMensagem("Dados do recibo salvos neste navegador.");
+        } catch (erro) {
+          alert("Não foi possível salvar. Se escolheu outra logo, use uma imagem menor.");
+        }
+      }
+
+      function carregarDados() {
+        const salvo = localStorage.getItem(CHAVE_DADOS);
+        if (!salvo) {
+          alert("Nenhum recibo salvo foi encontrado neste navegador.");
+          return;
+        }
+        try {
+          const dados = JSON.parse(salvo);
+          Object.entries(dados).forEach(([nome, conteudo]) => {
+            const campo = porId(nome);
+            if (campo && nome !== "logoPersonalizada") campo.value = conteudo;
+          });
+          logoAtual = dados.logoPersonalizada || LOGO_PADRAO;
+          porId("nomeLogo").textContent = dados.logoPersonalizada ? "Logo personalizada carregada" : "Logo padrão: logo.png";
+          atualizarRecibo();
+          mostrarMensagem("Recibo carregado.");
+        } catch (erro) {
+          alert("Os dados salvos estão corrompidos e não puderam ser carregados.");
+        }
+      }
+
+      function limparRecibo() {
+        if (!window.confirm("Limpar os dados deste recibo?")) return;
+        ["pagadorNome", "pagadorDocumento", "valorRecibo", "cidadeEstado", "referente", "observacoes"].forEach((nome) => {
+          porId(nome).value = "";
+        });
+        porId("numeroRecibo").value = "01";
+        porId("formaPagamento").value = "PIX";
+        porId("mostrarAssinaturaCliente").value = "nao";
+        porId("dataRecibo").value = hojeISO();
+        atualizarRecibo();
+      }
+
+      function imprimirRecibo() {
+        atualizarRecibo();
+        window.setTimeout(() => window.print(), 150);
+      }
+
+      porId("btnAtualizar").addEventListener("click", atualizarRecibo);
+      porId("btnImprimir").addEventListener("click", imprimirRecibo);
+      porId("btnSalvar").addEventListener("click", salvarDados);
+      porId("btnCarregar").addEventListener("click", carregarDados);
+      porId("btnLimpar").addEventListener("click", limparRecibo);
+      porId("btnRestaurarLogo").addEventListener("click", function () {
+        logoAtual = LOGO_PADRAO;
+        porId("logoArquivo").value = "";
+        porId("nomeLogo").textContent = "Logo padrão: logo.png";
+        atualizarRecibo();
+      });
+
+      document.querySelectorAll(".formulario input, .formulario textarea, .formulario select").forEach((campo) => {
+        if (campo.id !== "logoArquivo") {
+          campo.addEventListener("input", atualizarRecibo);
+          campo.addEventListener("change", atualizarRecibo);
+        }
+      });
+
+      porId("logoArquivo").addEventListener("change", function (evento) {
+        const arquivo = evento.target.files[0];
+        if (!arquivo) return;
+        if (!arquivo.type.startsWith("image/")) {
+          alert("Escolha um arquivo de imagem válido.");
+          evento.target.value = "";
+          return;
+        }
+        if (arquivo.size > 2 * 1024 * 1024) {
+          alert("A imagem deve ter no máximo 2 MB.");
+          evento.target.value = "";
+          return;
+        }
+        const leitor = new FileReader();
+        leitor.onload = function (resultado) {
+          logoAtual = resultado.target.result;
+          porId("nomeLogo").textContent = arquivo.name;
+          atualizarRecibo();
+        };
+        leitor.readAsDataURL(arquivo);
+      });
+
+      porId("logoVisual").addEventListener("error", function () {
+        this.alt = "Logo não encontrada: confirme o arquivo logo.png";
+      });
+
+      porId("dataRecibo").value = hojeISO();
+      atualizarRecibo();
+    });
+  </script>
+</body>
+</html>
